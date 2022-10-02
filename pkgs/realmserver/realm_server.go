@@ -376,8 +376,8 @@ func CreateRealm(rc *RealmConfig, baseurl url.URL, router *mux.Router) (*Realm, 
 	}
 	r.buildClaimMap()
 	r.accounts = make([]*ServiceAccount, len(rc.ServiceAccounts))
-	for i, sac := range rc.ServiceAccounts {
-		sa, err := CreateServiceAccount(&sac)
+	for i := range rc.ServiceAccounts {
+		sa, err := CreateServiceAccount(&rc.ServiceAccounts[i])
 		if err != nil {
 			return nil, err
 		}

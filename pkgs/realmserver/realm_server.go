@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ var (
 	defaultSigningAlgs   []string = []string{"RS256", "RS512"}
 	defaultResponseTypes []string = []string{"token"}
 	defaultSubjectTypes  []string = []string{"public"}
+	realmNameValidator            = regexp.MustCompile("^[0-9a-zA-Z\\-\\._]+$")
 )
 
 type RealmConfig struct {
@@ -280,7 +282,7 @@ func (realm *Realm) processClaims(r *http.Request, w http.ResponseWriter) (map[s
 			w.Write([]byte(fmt.Sprintf("{\"error\" : \"Could not parse claims %v\"}", err)))
 			return nil, true
 		}
-		for c, _ := range claims {
+		for c := range claims {
 			if _, ok := realm.claimsMap[c]; !ok {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
@@ -364,16 +366,16 @@ func (realm *Realm) CheckJWT(tokenString string) (*jwt.Token, error) {
 
 func CreateRealm(rc *RealmConfig, baseurl url.URL, router *mux.Router) (*Realm, error) {
 	r := Realm{Config: rc, BaseURL: baseurl}
+	if !realmNameValidator.Match([]byte(rc.Name)) {
+		return nil, fmt.Errorf("Bad characters in realm name %s", rc.Name)
+	}
 	for range []int{0, 1} {
 		err := r.generateKey()
 		if err != nil {
 			return nil, err
 		}
 	}
-	err := r.buildJWKS()
-	if err != nil {
-		return nil, err
-	}
+	r.buildJWKS()
 	r.buildClaimMap()
 	r.accounts = make([]*ServiceAccount, len(rc.ServiceAccounts))
 	for i := range rc.ServiceAccounts {
@@ -383,40 +385,22 @@ func CreateRealm(rc *RealmConfig, baseurl url.URL, router *mux.Router) (*Realm, 
 		}
 		r.accounts[i] = sa
 	}
-	err = r.buildDiscoveryConfig()
+	err := r.buildDiscoveryConfig()
 	if err != nil {
 		return nil, err
 	}
-	configpath, err := url.JoinPath(r.BaseURL.Path, "realms", r.Config.Name, ".well-known/openid-configuration")
-	if err != nil {
-		return nil, err
-	}
+	configpath, _ := url.JoinPath(r.BaseURL.Path, "realms", r.Config.Name, ".well-known/openid-configuration")
 	configpath = "/" + configpath
 	router.HandleFunc(configpath, r.serveDiscoveryConfig)
-	u, err := url.ParseRequestURI(r.discoveryConfig.JWKSUri)
-	if err != nil {
-		return nil, err
-	}
+	u, _ := url.ParseRequestURI(r.discoveryConfig.JWKSUri)
 	router.HandleFunc(u.Path, r.serveJWKSUri)
-	u, err = url.ParseRequestURI(r.discoveryConfig.AuthorizationEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	u, _ = url.ParseRequestURI(r.discoveryConfig.AuthorizationEndpoint)
 	router.HandleFunc(u.Path, r.serveAuth)
-	u, err = url.ParseRequestURI(r.discoveryConfig.RevocationEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	u, _ = url.ParseRequestURI(r.discoveryConfig.RevocationEndpoint)
 	router.HandleFunc(u.Path, r.serveRevocation)
-	u, err = url.ParseRequestURI(r.discoveryConfig.TokenEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	u, _ = url.ParseRequestURI(r.discoveryConfig.TokenEndpoint)
 	router.HandleFunc(u.Path, r.serveToken).Methods("POST")
-	u, err = url.ParseRequestURI(r.discoveryConfig.IntrospectionEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	u, _ = url.ParseRequestURI(r.discoveryConfig.IntrospectionEndpoint)
 	router.HandleFunc(u.Path, r.serveIntrospection).Methods("POST")
 	return &r, nil
 }

@@ -4,12 +4,17 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 )
 
 type KeySourceType uint8
+
+var (
+	validServiceAccountName = regexp.MustCompile("^[a-z0-9A-Z\\._\\-]+$")
+)
 
 const (
 	Undefined KeySourceType = iota
@@ -63,8 +68,8 @@ func CreateServiceAccount(config *ServiceAccountConfig) (*ServiceAccount, error)
 		Config:     config,
 		cachedKeys: make(map[string]*rsa.PublicKey, 0),
 	}
-	if len(config.Name) == 0 {
-		return nil, fmt.Errorf("Must declare a name for service account")
+	if !validServiceAccountName.Match([]byte(config.Name)) {
+		return nil, fmt.Errorf("Must declare a valid name for service account")
 	}
 	if config.KeySource == Undefined {
 		return nil, fmt.Errorf("Must declare a keysource for service account %s so it is not %s", config.Name, config.KeySource)

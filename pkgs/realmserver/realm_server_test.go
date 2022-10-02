@@ -205,6 +205,7 @@ func TestCreateRealm(t *testing.T) {
 		router  *mux.Router
 	}
 	goodURL, _ := url.Parse("http://test.com/")
+	badURL, _ := url.Parse("")
 	tests := []struct {
 		name    string
 		args    args
@@ -214,8 +215,67 @@ func TestCreateRealm(t *testing.T) {
 			name: "Bad Service Account",
 			args: args{
 				rc: &RealmConfig{
+					Name:            "name",
 					KeyBits:         512,
 					ServiceAccounts: []ServiceAccountConfig{{Name: "account-a"}},
+				},
+				baseurl: goodURL,
+				router:  mux.NewRouter(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Bad Key Gen",
+			args: args{
+				rc: &RealmConfig{
+					Name:            "name",
+					KeyBits:         0,
+					ServiceAccounts: []ServiceAccountConfig{{Name: "account-a"}},
+				},
+				baseurl: goodURL,
+				router:  mux.NewRouter(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Bad Base URL",
+			args: args{
+				rc: &RealmConfig{
+					Name:    "name",
+					KeyBits: 512,
+					ServiceAccounts: []ServiceAccountConfig{
+						{Name: "account-a", KeySource: JWKSFile, KeySourceFilePath: "test.json"},
+					},
+				},
+				baseurl: badURL,
+				router:  mux.NewRouter(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Bad Realm Name",
+			args: args{
+				rc: &RealmConfig{
+					Name:    "name!",
+					KeyBits: 512,
+					ServiceAccounts: []ServiceAccountConfig{
+						{Name: "account-a", KeySource: JWKSFile, KeySourceFilePath: "test.json"},
+					},
+				},
+				baseurl: goodURL,
+				router:  mux.NewRouter(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "No Realm Name",
+			args: args{
+				rc: &RealmConfig{
+					Name:    "",
+					KeyBits: 512,
+					ServiceAccounts: []ServiceAccountConfig{
+						{Name: "account-a", KeySource: JWKSFile, KeySourceFilePath: "test.json"},
+					},
 				},
 				baseurl: goodURL,
 				router:  mux.NewRouter(),
@@ -226,6 +286,7 @@ func TestCreateRealm(t *testing.T) {
 			name: "Good Run",
 			args: args{
 				rc: &RealmConfig{
+					Name:    "name",
 					KeyBits: 512,
 					ServiceAccounts: []ServiceAccountConfig{
 						{Name: "account-a", KeySource: JWKSFile, KeySourceFilePath: "test.json"},

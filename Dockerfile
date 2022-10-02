@@ -9,8 +9,10 @@ COPY pkgs/go.mod ./pkgs/
 COPY pkgs/go.sum ./pkgs/
 RUN cd pkgs && go mod download && cd ..
 
+COPY go.work ./
+COPY go.work.sum ./
 COPY *.go ./
-COPY pkgs ./
+COPY pkgs ./pkgs
 
 RUN CGO_ENABLED=0 go build -o /simple-service-account .
 

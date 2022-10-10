@@ -171,6 +171,7 @@ func (realm *Realm) serveIntrospection(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{\"error\" : \"content type header must be application/x-www-form-urlencoded got %v\"}", postType)))
 		return
 	}
+	r.ParseForm()
 	tokenString := r.Form.Get("token")
 	if len(tokenString) < 1 {
 		w.Header().Set("Content-Type", "application/json")
@@ -205,6 +206,7 @@ func (realm *Realm) serveToken(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{\"error\" : \"content type header must be application/x-www-form-urlencoded got %v\"}", postType)))
 		return
 	}
+	r.ParseForm()
 	clientAssertionType := r.Form.Get("client_assertion_type")
 	if clientAssertionType != "urn:ietf:params:oauth:client-assertion-type:jwt-bearer" {
 		w.Header().Set("Content-Type", "application/json")
